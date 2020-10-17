@@ -28,5 +28,7 @@ public interface VideoDao {
     @Select("SELECT * FROM video WHERE id=#{id}")
     public Video getVideo(int id);
 
+    @Select("DELETE FROM video WHERE id=#{id}")
+    public int deleteVideo(int id);
 
 }

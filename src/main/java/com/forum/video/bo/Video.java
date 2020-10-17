@@ -10,8 +10,9 @@ public class Video {
     private String title;
     private int userId;
     private String url;
+    private String state;
 
-    public Video(int id, String title, int userId, String url) {
+    public Video(int id, String title, int userId, String url, String state) {
         this.id = id;
         this.title = title;
         this.userId = userId;
@@ -22,6 +23,7 @@ public class Video {
         this.title = title;
         this.userId = userId;
         this.url = null;
+        this.state = "update";
     }
 
     public int getId() {

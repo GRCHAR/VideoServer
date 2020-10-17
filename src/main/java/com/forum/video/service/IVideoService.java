@@ -14,4 +14,6 @@ public interface IVideoService {
     public int updateVideo(String title, int userId, MultipartFile multipartFile) throws IOException;
 
     public Video getVideoMessage(int id);
+
+    public int deleteVideo(int id);
 }
