@@ -1,14 +1,13 @@
 package com.forum.video.controller;
 
 import com.forum.video.bo.Video;
+import com.forum.video.result.Result;
+import com.forum.video.result.ResultCodeMessage;
 import com.forum.video.service.IVideoService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
@@ -27,19 +26,25 @@ public class VideoController {
     private IVideoService videoService;
 
     @RequestMapping(value = "/create", method = RequestMethod.POST)
-    public int createVideo(@RequestBody HashMap<String, String> map, MultipartFile multipartFile){
-        String title = map.get("title");
-        int userId = Integer.parseInt(map.get("userId"));
+    public Result<Video> createVideo(@RequestParam String title, @RequestParam int userId, @RequestParam("video") MultipartFile multipartFile){
+        Video video = new Video();
         int videoId = 0;
         try{
-
-            videoId = videoService.updateVideo(title, userId, multipartFile);
+            boolean hasVideo = videoService.hasVideo(title, userId);
+            if(hasVideo){
+                return Result.failure(ResultCodeMessage.ALREADY_HAVE_VIDEO);
+            }
+            video = videoService.updateVideo(title, userId, multipartFile);
         }catch (Exception e){
-            logger.error("createVideo map" + map.toString());
-            return 0;
+            logger.error("createVideo " + title + " " +userId);
+            logger.error(e.getMessage());
+            return Result.failure(ResultCodeMessage.SERVER_ERROR);
         }
 
-        return videoId;
+        return Result.success(video);
     }
+
+
+
 
 }

@@ -3,7 +3,20 @@ spring:
   datasource:
     username: root
     password: 123456
-    url: jdbc:mysql://localhost:3306/Video
+    url: jdbc:mysql://47.93.125.10:3306/video
     driver-class-name: com.mysql.cj.jdbc.Driver
+  data:
+    mongodb:
+      uri: mongodb://admin:123456@47.93.125.10:27017/video
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+
 server:
   port: 8072
+
+
+
+video:
+  path: /Users/genghaoran/myVideos/

@@ -1,8 +1,11 @@
 package com.forum.video.service.impl;
 
 import com.forum.video.bo.Video;
+import com.forum.video.config.ConfigParam;
 import com.forum.video.dao.VideoDao;
+import com.forum.video.ffmpegUtil.FFmpegTool;
 import com.forum.video.service.IVideoService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -14,20 +17,43 @@ import java.io.IOException;
  * @author genghaoran
  */
 @Service
+@Slf4j
 public class VideoServiceImpl implements IVideoService {
 
     @Autowired
     private VideoDao videoDao;
 
+    @Autowired
+    private FFmpegTool fFmpegTool;
+
+    @Autowired
+    private ConfigParam configParam;
+
+
 
 
     @Override
-    public int updateVideo(String title, int userId, MultipartFile multipartFile) throws IOException {
+    public Video updateVideo(String title, int userId, MultipartFile multipartFile) throws IOException, InterruptedException {
         Video video = new Video(title, userId);
         int videoId = videoDao.createVideo(video);
-        File file = new File("/VideoStorage/" + videoId,title);
+        File fileDir = new File(configParam.getPath() + videoId);
+        log.info(multipartFile.getOriginalFilename());
+        if(!fileDir.exists()){
+            if(!fileDir.mkdirs()){
+                log.error("not successes mkdir!");
+                return null;
+            }
+        }
+        File file = new File(configParam.getPath() + videoId, title);
+        log.info("filePath:" + file.getAbsolutePath());
+//        CmdResult cmdResult = fFmpegTool.transcodeVideoDefault(file, "/VideoStorage/transcode");
+//        if(cmdResult.getExitValue() == 1){
+//           return null;
+//        }
         multipartFile.transferTo(file);
-        return videoId;
+        video.setUrl(file.getAbsolutePath());
+        videoDao.updateVideo(video);
+        return video;
     }
 
     @Override
@@ -46,6 +72,18 @@ public class VideoServiceImpl implements IVideoService {
         }
         return 1;
     }
+
+    @Override
+    public boolean hasVideo(String title, int userId){
+        Integer exist = videoDao.hasVideo(title, userId);
+        if(exist != null){
+            return true;
+        }
+        return  false;
+    }
+
+
+
 
 
 }

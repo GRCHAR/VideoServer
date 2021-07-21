@@ -11,6 +11,7 @@ import java.nio.charset.StandardCharsets;
  */
 @Component
 public class FFmpegTool {
+
     public CmdResult executeCmd(String cmd) throws IOException, InterruptedException {
         CmdResult cmdResult = new CmdResult();
         Process process = Runtime.getRuntime().exec(cmd);
@@ -36,6 +37,11 @@ public class FFmpegTool {
         String cmd = "ffmpeg -i" + file.getAbsolutePath() + "-c:v "+fFmpegParameter.getType()+" -r " +
                 fFmpegParameter.getFps() + " " + outputDir + "/" + file.getName();
         return executeCmd(cmd);
+    }
+
+    public CmdResult transcodeVideoDefault(File file, String outputDir) throws IOException, InterruptedException {
+        FFmpegParameter ffmpegParameter = new FFmpegParameter(0, 25 ,"libx264");
+        return transcodeVideo(file, outputDir, ffmpegParameter);
     }
 
 

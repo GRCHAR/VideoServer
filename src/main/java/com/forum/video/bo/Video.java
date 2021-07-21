@@ -2,10 +2,19 @@ package com.forum.video.bo;
 
 import org.elasticsearch.common.recycler.Recycler;
 
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+
 /**
  * @author genghaoran
  */
+
+@Entity(name = "video")
 public class Video {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
     private String title;
     private int userId;
@@ -17,6 +26,10 @@ public class Video {
         this.title = title;
         this.userId = userId;
         this.url = url;
+    }
+
+    public Video(){
+
     }
 
     public Video(String title, int userId){

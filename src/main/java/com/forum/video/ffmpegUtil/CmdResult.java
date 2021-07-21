@@ -1,5 +1,8 @@
 package com.forum.video.ffmpegUtil;
 
+/**
+ * @author genghaoran
+ */
 public class CmdResult {
 
     private int exitValue;

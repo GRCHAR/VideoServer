@@ -11,7 +11,11 @@ public enum ResultCodeMessage {
     // 资源未找到
     NOT_FOUND(404, "not found"),
     // 服务器错误
-    SERVER_ERROR(500,"server error"),;
+    SERVER_ERROR(500,"server error"),
+
+    ALREADY_HAVE_VIDEO(500, "视频标题重复");
+
+
 
     private int code;
     private String message;
