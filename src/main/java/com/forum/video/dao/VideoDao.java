@@ -32,7 +32,7 @@ public interface VideoDao {
      * @return 返回查找结果
      */
     @Select("SELECT 1 FROM video WHERE title=#{title} AND user_id=#{userId} LIMIT 1")
-    int hasVideo(String title, int userId);
+    Integer hasVideo(String title, int userId);
 
     /**
      * 根据ID获取视频对象信息
@@ -47,7 +47,7 @@ public interface VideoDao {
      * @param id 视频ID
      * @return 视频对象
      */
-    @Select("DELETE FROM video WHERE id=#{id}")
+    @Delete("DELETE FROM video WHERE id=#{id}")
     int deleteVideo(int id);
 
 

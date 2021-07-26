@@ -22,5 +22,6 @@ public class MultipartFileConfiguration {
         /// 设置总上传数据总大小
         factory.setMaxRequestSize(DataSize.parse("1024MB"));
         return factory.createMultipartConfig();
+
     }
 }

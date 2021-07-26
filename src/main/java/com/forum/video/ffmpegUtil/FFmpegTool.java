@@ -1,5 +1,6 @@
 package com.forum.video.ffmpegUtil;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
@@ -10,9 +11,11 @@ import java.nio.charset.StandardCharsets;
  * @author genghaoran
  */
 @Component
+@Slf4j
 public class FFmpegTool {
 
     public CmdResult executeCmd(String cmd) throws IOException, InterruptedException {
+        log.info("start cmd:" + cmd);
         CmdResult cmdResult = new CmdResult();
         Process process = Runtime.getRuntime().exec(cmd);
         process.waitFor();
@@ -34,13 +37,14 @@ public class FFmpegTool {
 
 
     public CmdResult transcodeVideo(File file, String outputDir, FFmpegParameter fFmpegParameter) throws IOException, InterruptedException {
-        String cmd = "ffmpeg -i" + file.getAbsolutePath() + "-c:v "+fFmpegParameter.getType()+" -r " +
-                fFmpegParameter.getFps() + " " + outputDir + "/" + file.getName();
+        String cmd = "ffmpeg -i " + file.getAbsolutePath() + " -c:v "+fFmpegParameter.getType()+" -r " +
+                fFmpegParameter.getFps() + " -b:v " + fFmpegParameter.getBitrate() + " -s " + fFmpegParameter.getScale() + " " + outputDir + "/" + file.getName() + ".mp4";
+
         return executeCmd(cmd);
     }
 
     public CmdResult transcodeVideoDefault(File file, String outputDir) throws IOException, InterruptedException {
-        FFmpegParameter ffmpegParameter = new FFmpegParameter(0, 25 ,"libx264");
+        FFmpegParameter ffmpegParameter = new FFmpegParameter(FFmpegPatter.VIDEO_30FPS_2000BIT_1080P_H264);
         return transcodeVideo(file, outputDir, ffmpegParameter);
     }
 
