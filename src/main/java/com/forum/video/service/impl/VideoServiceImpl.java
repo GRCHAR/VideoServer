@@ -16,9 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -42,16 +40,11 @@ public class VideoServiceImpl implements IVideoService {
     private RabbitMqSender rabbitMqSender;
 
 
-    private final ThreadPoolExecutor executor = new ThreadPoolExecutor(5, 10, 200, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<>(5), new ThreadFactory() {
-        @Override
-        public Thread newThread(Runnable r) {
-            return new Thread(r, "ffmpeg");
-        }
-    });
+    private final ThreadPoolExecutor executor = new ThreadPoolExecutor(5, 10, 200, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<>(5), r -> new Thread(r, "upload-transcode-video"));
 
 
     @Override
-    public Video updateVideo(String title, int userId, MultipartFile multipartFile) throws IOException, InterruptedException {
+    public Video updateVideo(String title, int userId, MultipartFile multipartFile){
         Video video = new Video(title, userId);
         videoDao.createVideo(video);
         int videoId = video.getId();
@@ -69,28 +62,48 @@ public class VideoServiceImpl implements IVideoService {
             try {
                 try {
                     multipartFile.transferTo(file);
-                    CmdResult cmdResult = null;
+                    JSONObject jsonObject;
+                    jsonObject = new JSONObject();
+                    jsonObject.put("code", 2);
+                    jsonObject.put("videoId", videoId);
+                    jsonObject.put("title", title);
+                    jsonObject.put("userId", userId);
+                    jsonObject.put("state", "upload");
+                    jsonObject.put("message", "开始上传");
+                    rabbitMqSender.send(jsonObject.toString());
+                    CmdResult cmdResult;
                     cmdResult = fFmpegTool.transcodeVideoDefault(file, configParam.getPath() + videoId);
                     if (cmdResult.getExitValue() == 1) {
-                        JSONObject jsonObject = new JSONObject();
+                        video.setState("fail");
+                        videoDao.updateVideo(video);
+                        jsonObject = new JSONObject();
                         jsonObject.put("code", 1);
                         jsonObject.put("videoId", videoId);
                         jsonObject.put("userId", userId);
+                        jsonObject.put("title", title);
+                        jsonObject.put("state", "fail");
                         jsonObject.put("message", "cmdResult.getExitValue() == 1");
-                        rabbitMqSender.send(jsonObject.toString());
                     } else {
-                        JSONObject jsonObject = new JSONObject();
+                        video.setState("success");
+                        videoDao.updateVideo(video);
+                        jsonObject = new JSONObject();
                         jsonObject.put("code", 0);
                         jsonObject.put("videoId", videoId);
                         jsonObject.put("userId", userId);
-                        rabbitMqSender.send(jsonObject.toString());
+                        jsonObject.put("title", title);
+                        jsonObject.put("state", "success");
                     }
+                    rabbitMqSender.send(jsonObject.toString());
 
                 } catch (IOException | InterruptedException e) {
+                    video.setState("fail");
+                    videoDao.updateVideo(video);
                     JSONObject jsonObject = new JSONObject();
                     jsonObject.put("code", 1);
                     jsonObject.put("videoId", videoId);
                     jsonObject.put("userId", userId);
+                    jsonObject.put("title", title);
+                    jsonObject.put("state", "fail");
                     jsonObject.put("message", e.getMessage());
                     rabbitMqSender.send(jsonObject.toString());
                     log.error(e.getMessage());
@@ -106,6 +119,11 @@ public class VideoServiceImpl implements IVideoService {
         video.setUrl(file.getAbsolutePath());
         videoDao.updateVideo(video);
         return video;
+    }
+
+    @Override
+    public void testQueue(){
+        rabbitMqSender.sendTest();
     }
 
     @Override
@@ -128,10 +146,7 @@ public class VideoServiceImpl implements IVideoService {
     @Override
     public boolean hasVideo(String title, int userId) {
         Integer exist = videoDao.hasVideo(title, userId);
-        if (exist != null) {
-            return true;
-        }
-        return false;
+        return exist != null;
     }
 
 

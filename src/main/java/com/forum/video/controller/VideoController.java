@@ -40,9 +40,15 @@ public class VideoController {
             logger.error(e.getMessage());
             return Result.failure(ResultCodeMessage.SERVER_ERROR);
         }
-
         return Result.success(video);
     }
+
+    @RequestMapping(method = RequestMethod.GET, value = "/testQueue")
+    public Result testQueue(){
+        videoService.testQueue();
+        return Result.success();
+    }
+
 
 
 

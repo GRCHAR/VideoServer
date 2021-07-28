@@ -23,5 +23,13 @@ public class RabbitMqSender {
         this.amqpTemplate.convertAndSend("upload.video", context);
     }
 
+    public void sendTest(){
+        for(int i = 0;i < 10000;i++){
+            log.info("sendTest:" + i);
+            this.amqpTemplate.convertAndSend("test", "sendTest:"+ i);
+        }
+
+    }
+
 
 }

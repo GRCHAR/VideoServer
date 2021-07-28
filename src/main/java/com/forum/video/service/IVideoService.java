@@ -18,5 +18,7 @@ public interface IVideoService {
 
     public boolean hasVideo(String title, int userId);
 
+    public void testQueue();
+
 
 }

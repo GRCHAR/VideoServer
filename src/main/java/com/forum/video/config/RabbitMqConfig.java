@@ -13,4 +13,5 @@ public class RabbitMqConfig {
     public Queue queue(){
         return new Queue("Queue1");
     }
+
 }

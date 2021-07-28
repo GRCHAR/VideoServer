@@ -71,6 +71,14 @@ public class Video {
         this.url = url;
     }
 
+    public String getState() {
+        return state;
+    }
+
+    public void setState(String state) {
+        this.state = state;
+    }
+
     @Override
     public String toString() {
         return "Video{" +
