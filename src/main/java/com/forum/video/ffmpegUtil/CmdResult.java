@@ -11,14 +11,17 @@ public class CmdResult {
 
     private String errorMessage;
 
+    private String outputPath;
+
     public CmdResult(){
 
     }
 
-    public CmdResult(int exitValue, String errorMessage, String outputMessage){
+    public CmdResult(int exitValue, String errorMessage, String outputMessage, String outputPath){
         this.exitValue = exitValue;
         this.errorMessage = errorMessage;
         this.outputMessage = outputMessage;
+        this.outputPath = outputPath;
     }
 
 
@@ -44,5 +47,13 @@ public class CmdResult {
 
     public String getOutputMessage() {
         return outputMessage;
+    }
+
+    public String getOutputPath() {
+        return outputPath;
+    }
+
+    public void setOutputPath(String outputPath) {
+        this.outputPath = outputPath;
     }
 }

@@ -5,6 +5,7 @@ import com.forum.video.config.ConfigParam;
 import com.forum.video.dao.VideoDao;
 import com.forum.video.ffmpegUtil.CmdResult;
 import com.forum.video.ffmpegUtil.FFmpegTool;
+import com.forum.video.service.ITranscodeQueue;
 import com.forum.video.service.IVideoService;
 import com.forum.video.service.rabbit.RabbitMqSender;
 import lombok.extern.slf4j.Slf4j;
@@ -14,9 +15,10 @@ import org.springframework.boot.configurationprocessor.json.JSONObject;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
-import java.io.IOException;
+import javax.servlet.http.HttpServletResponse;
+import java.io.*;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -39,14 +41,18 @@ public class VideoServiceImpl implements IVideoService {
     @Autowired
     private RabbitMqSender rabbitMqSender;
 
+    @Autowired
+    private ITranscodeQueue transcodeQueueService;
 
-    private final ThreadPoolExecutor executor = new ThreadPoolExecutor(5, 10, 200, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<>(5), r -> new Thread(r, "upload-transcode-video"));
+
+    private final ThreadPoolExecutor executor = new ThreadPoolExecutor(5, 10, 200, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<>(5), r -> new Thread(r, "upload-video"));
 
 
     @Override
-    public Video updateVideo(String title, int userId, MultipartFile multipartFile){
+    public Video uploadVideo(String title, int userId, MultipartFile multipartFile){
         Video video = new Video(title, userId);
-        videoDao.createVideo(video);
+        videoDao.insert(video);
+        log.info("videoId:" + video.getId());
         int videoId = video.getId();
         File fileDir = new File(configParam.getPath() + videoId);
         log.info(multipartFile.getOriginalFilename());
@@ -61,7 +67,6 @@ public class VideoServiceImpl implements IVideoService {
         executor.execute(() -> {
             try {
                 try {
-                    multipartFile.transferTo(file);
                     JSONObject jsonObject;
                     jsonObject = new JSONObject();
                     jsonObject.put("code", 2);
@@ -70,32 +75,14 @@ public class VideoServiceImpl implements IVideoService {
                     jsonObject.put("userId", userId);
                     jsonObject.put("state", "upload");
                     jsonObject.put("message", "开始上传");
+                    multipartFile.transferTo(file);
                     rabbitMqSender.send(jsonObject.toString());
-                    CmdResult cmdResult;
-                    cmdResult = fFmpegTool.transcodeVideoDefault(file, configParam.getPath() + videoId);
-                    if (cmdResult.getExitValue() == 1) {
-                        video.setState("fail");
-                        videoDao.updateVideo(video);
-                        jsonObject = new JSONObject();
-                        jsonObject.put("code", 1);
-                        jsonObject.put("videoId", videoId);
-                        jsonObject.put("userId", userId);
-                        jsonObject.put("title", title);
-                        jsonObject.put("state", "fail");
-                        jsonObject.put("message", "cmdResult.getExitValue() == 1");
-                    } else {
-                        video.setState("success");
-                        videoDao.updateVideo(video);
-                        jsonObject = new JSONObject();
-                        jsonObject.put("code", 0);
-                        jsonObject.put("videoId", videoId);
-                        jsonObject.put("userId", userId);
-                        jsonObject.put("title", title);
-                        jsonObject.put("state", "success");
-                    }
+                    transcodeQueueService.addVideoToTranscodeQueue(videoId);
+                    jsonObject.put("state", "transcode");
+                    jsonObject.put("message", "开始转码");
                     rabbitMqSender.send(jsonObject.toString());
 
-                } catch (IOException | InterruptedException e) {
+                } catch (Exception e) {
                     video.setState("fail");
                     videoDao.updateVideo(video);
                     JSONObject jsonObject = new JSONObject();
@@ -148,6 +135,41 @@ public class VideoServiceImpl implements IVideoService {
         Integer exist = videoDao.hasVideo(title, userId);
         return exist != null;
     }
+
+    @Override
+    public Video updateVideo(Video video){
+        videoDao.updateById(video);
+        return videoDao.selectById(video.getId());
+    }
+
+    @Override
+    public void getVideoFile(HttpServletResponse response, int videoId, String fileName) {
+        byte[] buffer = new byte[1024];
+        String dashPath = configParam.getDashPath();
+        try {
+            File file;
+            if("getDash".equals(fileName)){
+                file = new File(dashPath + "/" + videoId + "/" + videoDao.getVideo(videoId).getTitle() + ".mpd");
+            } else {
+                file = new File(dashPath + "/" + videoId + "/" + fileName);
+
+            }
+            BufferedOutputStream outputStream = new BufferedOutputStream(response.getOutputStream());
+            BufferedInputStream bufferedInputStream = new BufferedInputStream(new FileInputStream(file));
+            int readNumber = bufferedInputStream.read(buffer, 0 , buffer.length);
+            while (readNumber != -1){
+                outputStream.write(buffer, 0, readNumber);
+                readNumber = bufferedInputStream.read(buffer, 0, buffer.length);
+            }
+            outputStream.flush();
+            outputStream.close();
+            bufferedInputStream.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+
 
 
 }

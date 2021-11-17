@@ -26,3 +26,5 @@ server:
 
 video:
   path: /Users/genghaoran/myVideos/
+  transcodePath: /Users/genghaoran/transcodeVideos/
+  dash-path: /Users/genghaoran/dashVideos/

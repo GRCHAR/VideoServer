@@ -1,5 +1,6 @@
 package com.forum.video.dao;
 
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.forum.video.bo.Video;
 import org.apache.ibatis.annotations.*;
 
@@ -7,7 +8,7 @@ import org.apache.ibatis.annotations.*;
  * @author Administrator
  */
 @Mapper
-public interface VideoDao {
+public interface VideoDao extends BaseMapper<Video> {
 
     /**
      * 添加视频信息

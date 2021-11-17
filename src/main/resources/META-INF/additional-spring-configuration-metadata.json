@@ -4,5 +4,10 @@
       "name": "video.video-path",
       "type": "java.lang.String",
       "description": "Description for video.video-path."
-  }
-] }
+    },
+    {
+      "name": "video.video-transcodePath",
+      "type": "java.lang.String",
+      "description": "Description for video.transcodePath."
+    }
+  ] }
