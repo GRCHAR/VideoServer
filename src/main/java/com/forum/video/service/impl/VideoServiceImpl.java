@@ -1,9 +1,10 @@
 package com.forum.video.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.forum.video.bo.Video;
 import com.forum.video.config.ConfigParam;
 import com.forum.video.dao.VideoDao;
-import com.forum.video.ffmpegUtil.CmdResult;
 import com.forum.video.ffmpegUtil.FFmpegTool;
 import com.forum.video.service.ITranscodeQueue;
 import com.forum.video.service.IVideoService;
@@ -12,13 +13,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.configurationprocessor.json.JSONException;
 import org.springframework.boot.configurationprocessor.json.JSONObject;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
+import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -49,6 +51,7 @@ public class VideoServiceImpl implements IVideoService {
 
 
     @Override
+//    @Async("uploadVideoFile")
     public Video uploadVideo(String title, int userId, MultipartFile multipartFile){
         Video video = new Video(title, userId);
         videoDao.insert(video);
@@ -143,6 +146,29 @@ public class VideoServiceImpl implements IVideoService {
     }
 
     @Override
+    public void getVideoImage(HttpServletResponse response, int videoId, int imageId){
+        byte[] buffer = new byte[1024];
+        String imagePath = configParam.getTranscodePath();
+        try{
+            File file = new File(imagePath + "/" + videoId + "/image_" + imageId + ".png");
+            BufferedOutputStream outputStream = new BufferedOutputStream(response.getOutputStream());
+            BufferedInputStream inputStream = new BufferedInputStream(new FileInputStream(file));
+            int readNumber = inputStream.read(buffer,0 ,buffer.length);
+            while(readNumber != -1){
+                outputStream.write(buffer, 0, readNumber);
+                readNumber = inputStream.read(buffer, 0, buffer.length);
+            }
+            outputStream.flush();
+            outputStream.close();
+            inputStream.close();
+        } catch (Exception e){
+            log.error("getVideoImage error, message:" + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+
+    @Override
     public void getVideoFile(HttpServletResponse response, int videoId, String fileName) {
         byte[] buffer = new byte[1024];
         String dashPath = configParam.getDashPath();
@@ -169,7 +195,33 @@ public class VideoServiceImpl implements IVideoService {
         }
     }
 
+    @Override
+    public List<Video> getVideoPageList(int pageNumber, String searchName){
 
+        try{
+//            LambdaQueryWrapper<Video> userLambdaQueryWrapper = Wrappers.lambdaQuery();
+//            userLambdaQueryWrapper.like(Video::getState , "success");
+//            Page<Video> videoPage = new Page<>(pageNumber,3, false);
+            QueryWrapper<Video> wrapper = new QueryWrapper<>();
+            wrapper.eq("state", "success");
+            wrapper.like("title", searchName);
+            Page<Video> videoPage = videoDao.selectPage(new Page<>(pageNumber,12), wrapper);
+            log.info("videoPage.getPages()" + videoPage.getPages());
+            log.info("videoPage.geCurrent()" + videoPage.getCurrent());
+            return videoPage.getRecords();
+        } catch (Exception e){
+            log.error("getVideoPageList error, message:" + e.getMessage());
+        }
+        return null;
+    }
+
+    @Override
+    public long getVideoPageTotal(String searchName){
+        QueryWrapper<Video> wrapper = new QueryWrapper<>();
+        wrapper.like("title", searchName);
+        Page<Video> videoPage = videoDao.selectPage(new Page<>(1, 12), wrapper);
+        return videoPage.getTotal();
+    }
 
 
 }

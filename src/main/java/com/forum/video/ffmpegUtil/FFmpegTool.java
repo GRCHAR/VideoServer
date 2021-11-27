@@ -21,54 +21,15 @@ import java.util.concurrent.Executor;
 public class FFmpegTool {
 
     @Autowired
-    ThreadPoolTaskExecutor clearStream;
+    ProcessReadStream processReadStream;
 
     public CmdResult executeCmd(String cmd) throws IOException, InterruptedException {
         log.info("start cmd:" + cmd);
         CmdResult cmdResult = new CmdResult();
         Process process = Runtime.getRuntime().exec(cmd);
         log.info("process start!");
-        new Thread() {
-            @Override
-            public void run() {
-                BufferedReader in = new BufferedReader(new InputStreamReader(process.getInputStream()));
-                String line = null;
-                try {
-                    while ((line = in.readLine()) != null) {
-//                        log.info("output: " + line);
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } finally {
-                    try {
-                        in.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        }.start();
-        // 处理ErrorStream的线程
-        new Thread() {
-            @Override
-            public void run() {
-                BufferedReader err = new BufferedReader(new InputStreamReader(process.getErrorStream()));
-                String line = null;
-                try {
-                    while ((line = err.readLine()) != null) {
-//                        log.info("err: " + line);
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } finally {
-                    try {
-                        err.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        }.start();
+        processReadStream.readErrorStream(process);
+        processReadStream.readInputStream(process);
         process.waitFor();
         if(process.exitValue() == 0){
             cmdResult.setExitValue(0);
@@ -96,10 +57,24 @@ public class FFmpegTool {
         return cmdResult;
     }
 
+    public CmdResult transcodeVideoFrames(File file, String outputDir) throws IOException, InterruptedException {
+        String cmd = "ffmpeg -i " + file.getAbsolutePath() + " -vf fps=1/60 -q:v 1 "+ outputDir +"/image_%d.png -y";
+        CmdResult cmdResult = executeCmd(cmd);
+        cmdResult.setOutputPath(outputDir);
+        return cmdResult;
+    }
+
     @Async("transcodeVideoExecutor")
     public CompletableFuture<CmdResult> transcodeVideoDefault(File file, String outputDir) throws IOException, InterruptedException {
         FFmpegParameter ffmpegParameter = new FFmpegParameter(FFmpegPatter.VIDEO_30FPS_2000BIT_1080P_H264);
-        return CompletableFuture.completedFuture(transcodeVideo(file, outputDir, ffmpegParameter));
+        CmdResult cmdTranscodeResult = transcodeVideo(file, outputDir, ffmpegParameter);
+        if(cmdTranscodeResult.getExitValue() == 0){
+            CmdResult imgTranscodeResult = transcodeVideoFrames(file, outputDir);
+            return CompletableFuture.completedFuture(imgTranscodeResult);
+        }
+        CmdResult result = new CmdResult();
+        result.setExitValue(1);
+        return CompletableFuture.completedFuture(result);
     }
 
     @Async("transcodeDashVideo")
@@ -115,23 +90,8 @@ public class FFmpegTool {
         return CompletableFuture.completedFuture(cmdResult);
     }
 
-    void clearStream(Process process){
-        log.info("clear start!");
-        byte[] outputByte = new byte[1];
-        int readNumber = 0;
-        try {
-            readNumber = process.getInputStream().read(outputByte);
-            log.info("first read:" + readNumber);
 
-            while(readNumber != -1){
-                log.info("readNumber:" + readNumber);
-                readNumber = process.getInputStream().read(outputByte);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
 
-    }
 
 
 
